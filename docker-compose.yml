@@ -1,0 +1,58 @@
+x-backend: &backend
+  build: ./backend
+  environment:
+    APP_ENV: ${APP_ENV:?Set APP_ENV in .env}
+    LOG_LEVEL: ${LOG_LEVEL:?Set LOG_LEVEL in .env}
+    HTTP_PORT: ${HTTP_PORT:?Set HTTP_PORT in .env}
+    POSTGRES_HOST: ${POSTGRES_HOST:?Set POSTGRES_HOST in .env}
+    POSTGRES_PORT: ${POSTGRES_PORT:?Set POSTGRES_PORT in .env}
+    POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+    POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN in .env}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  migrate:
+    <<: *backend
+    command: ["migrate", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  backend:
+    <<: *backend
+    ports:
+      - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$$HTTP_PORT/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    stop_grace_period: 10s
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Set VITE_API_BASE_URL in .env}
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:?Set FRONTEND_PORT in .env}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
