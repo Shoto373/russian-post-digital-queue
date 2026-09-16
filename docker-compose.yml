@@ -25,6 +25,17 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./docs/openapi.yaml:/openapi.yaml
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+    depends_on:
+      - backend
+
   migrate:
     <<: *backend
     command: ["migrate", "up"]
