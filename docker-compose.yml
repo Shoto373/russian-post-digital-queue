@@ -14,6 +14,7 @@ x-backend: &backend
 services:
   postgres:
     image: postgres:17-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
@@ -26,8 +27,15 @@ services:
       interval: 3s
       timeout: 3s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
   swagger:
     image: swaggerapi/swagger-ui
+    restart: unless-stopped
     ports:
       - "8081:8080"
     volumes:
@@ -36,10 +44,15 @@ services:
       SWAGGER_JSON: /openapi.yaml
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
 
   backend:
     <<: *backend
-    restart: on-failure:5
+    restart: unless-stopped
     ports:
       - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
     depends_on:
@@ -51,8 +64,15 @@ services:
       timeout: 3s
       retries: 5
     stop_grace_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
   frontend:
     build: ./frontend
+    restart: unless-stopped
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
       PUBLIC_APP_BASE_URL: ${PUBLIC_APP_BASE_URL:-}
@@ -64,31 +84,102 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
   prometheus:
     image: prom/prometheus:v2.55.0
+    restart: unless-stopped
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
-    restart: unless-stopped
+    depends_on:
+      - alertmanager
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
+    restart: unless-stopped
     environment:
       DATA_SOURCE_NAME: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
     restart: unless-stopped
+    entrypoint: ["/entrypoint.sh"]
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.template.yml:/etc/alertmanager/alertmanager.template.yml:ro
+      - ./monitoring/alertmanager/entrypoint.sh:/entrypoint.sh:ro
+      - alertmanager_data:/alertmanager
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    ports:
+      - "127.0.0.1:9093:9093"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+
+  loki:
+    image: grafana/loki:3.0.0
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
 
   grafana:
     image: grafana/grafana:11.3.0
+    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env}
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/definitions/overview.json
+      GF_SERVER_DOMAIN: ${SERVER_DOMAIN:-post-queue.duckdns.org}
+      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -96,9 +187,40 @@ services:
       - "3001:3000"
     depends_on:
       - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  postgres-backup:
+    image: prodrigestivill/postgres-backup-local:17-alpine
     restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SCHEDULE: "@every 6h"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 80
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.3'
+          memory: 256M
 
 volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  alertmanager_data:
+  loki_data:
