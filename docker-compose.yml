@@ -44,6 +44,7 @@ services:
         condition: service_healthy
   backend:
     <<: *backend
+    restart: on-failure:5
     ports:
       - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
     depends_on:
@@ -59,6 +60,7 @@ services:
     build: ./frontend
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+      PUBLIC_APP_BASE_URL: ${PUBLIC_APP_BASE_URL:-}
     volumes:
       - ./frontend:/app
       - /app/node_modules
