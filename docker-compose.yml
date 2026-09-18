@@ -20,6 +20,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
       interval: 3s
@@ -36,20 +37,14 @@ services:
     depends_on:
       - backend
 
-  migrate:
-    <<: *backend
-    command: ["migrate", "up"]
-    depends_on:
-      postgres:
-        condition: service_healthy
   backend:
     <<: *backend
     restart: on-failure:5
     ports:
       - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:$$HTTP_PORT/health"]
       interval: 5s
