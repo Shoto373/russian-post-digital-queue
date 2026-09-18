@@ -58,7 +58,10 @@ services:
   frontend:
     build: ./frontend
     environment:
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Set VITE_API_BASE_URL in .env}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     ports:
       - "127.0.0.1:${FRONTEND_PORT:?Set FRONTEND_PORT in .env}:5173"
     depends_on:
