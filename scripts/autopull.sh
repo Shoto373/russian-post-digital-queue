@@ -54,8 +54,10 @@ git pull origin "$BRANCH"
 echo "🐳 Пересобираем и перезапускаем обновленные контейнеры..."
 if docker compose version >/dev/null 2>&1; then
   docker compose up -d --build
+  docker compose exec -T backend /app/api migrate up || true
 else
   docker-compose up -d --build
+  docker-compose exec -T backend /app/api migrate up || true
 fi
 
 echo "🧹 Удаление устаревших промежуточных docker-образов..."
