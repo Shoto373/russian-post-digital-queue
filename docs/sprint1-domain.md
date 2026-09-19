@@ -54,7 +54,9 @@ API должен валидировать UUID и обязательный Idemp
 sequence ticket_public_number_seq и SQL function next_ticket_public_number.
 Services — глобальный каталог без branch_id. WindowService хранит branch_id для составных
 FK: capability должна принадлежать тому же отделению и его BranchService.
-Tickets также имеют FK на BranchService, Window/Branch и WindowService.
+Tickets имеют FK на BranchService и Window/Branch; исторический составной FK
+tickets(window_id, service_id) → window_services удалён миграцией 000012, чтобы любую
+услугу окна можно было отключить независимо от истории талонов.
 CHECK constraints ограничивают frozen enum values и обязательные поля этапов обслуживания.
 Все даты — timestamptz.
 
