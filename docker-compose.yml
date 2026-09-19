@@ -70,6 +70,8 @@ services:
   backend:
     <<: *backend
     restart: unless-stopped
+    volumes:
+      - ./queue_policy.yaml:/app/queue_policy.yaml:ro
     ports:
       - "127.0.0.1:${HTTP_PORT}:${HTTP_PORT}"
     depends_on:
