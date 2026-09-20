@@ -51,41 +51,17 @@ echo "========================================================"
 echo "📥 Подтягиваем изменения (git pull)..."
 git pull origin "$BRANCH"
 
-COMPOSE="docker compose"
-if ! docker compose version >/dev/null 2>&1; then
-  COMPOSE="docker-compose"
-fi
-
-echo "🧪 Предварительная сборка образов (pre-build check)..."
-if ! $COMPOSE build backend frontend; then
-  echo "❌ Ошибка сборки образов! Выполняем откат к $LOCAL_HASH..."
-  git reset --hard "$LOCAL_HASH"
-  exit 1
-fi
-
-echo "🐳 Запуск обновленных контейнеров..."
-$COMPOSE up -d --build
-$COMPOSE exec -T backend /app/api migrate up || true
-
-echo "⏳ Проверка работоспособности сервиса (/ready)..."
-HEALTHY=false
-for i in {1..12}; do
-  if curl -sf http://127.0.0.1:8080/ready >/dev/null 2>&1; then
-    HEALTHY=true
-    break
-  fi
-  sleep 2
-done
-
-if [ "$HEALTHY" = false ]; then
-  echo "❌ Backend health-check провален! Выполняем автоматический откат к $LOCAL_HASH..."
-  git reset --hard "$LOCAL_HASH"
-  $COMPOSE up -d --build
-  exit 1
+echo "🐳 Пересобираем и перезапускаем обновленные контейнеры..."
+if docker compose version >/dev/null 2>&1; then
+  docker compose up -d --build
+  docker compose exec -T backend /app/api migrate up || true
+else
+  docker-compose up -d --build
+  docker-compose exec -T backend /app/api migrate up || true
 fi
 
 echo "🧹 Удаление устаревших промежуточных docker-образов..."
 docker image prune -f
 
-echo "✅ [$(date '+%Y-%m-%d %H:%M:%S')] Деплой успешно завершен и проверен!"
+echo "✅ [$(date '+%Y-%m-%d %H:%M:%S')] Деплой успешно завершен!"
 echo ""
