@@ -21,6 +21,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command:
       - "postgres"
       - "-c"
@@ -89,23 +90,24 @@ services:
           memory: 512M
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     restart: unless-stopped
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
       PUBLIC_APP_BASE_URL: ${PUBLIC_APP_BASE_URL:-}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:?Set FRONTEND_PORT in .env}:80"
+      - "127.0.0.1:${FRONTEND_PORT:?Set FRONTEND_PORT in .env}:5173"
     depends_on:
       backend:
         condition: service_healthy
     deploy:
       resources:
         limits:
-          cpus: '0.25'
-          memory: 128M
+          cpus: '0.5'
+          memory: 512M
 
   prometheus:
     image: prom/prometheus:v2.55.0
