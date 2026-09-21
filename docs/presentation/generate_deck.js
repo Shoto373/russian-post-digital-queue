@@ -295,7 +295,7 @@ function addCard(slide, x, y, w, h, bg = C_CARD_BG, border = C_BORDER) {
   const slide = pres.addSlide();
   slide.background = { color: C_BG_LIGHT };
 
-  slide.addText('PRODUCTION READY', {
+  slide.addText('READY FOR SUBMISSION', {
     x: 0.8, y: 0.6, w: 11.7, h: 0.3,
     fontFace: 'Arial', fontSize: 11, bold: true, color: C_DEEP_BLUE, margin: 0
   });
