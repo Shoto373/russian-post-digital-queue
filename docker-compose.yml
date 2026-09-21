@@ -10,6 +10,10 @@ x-backend: &backend
     POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:?Set CORS_ALLOWED_ORIGIN in .env}
+    NOTIFICATION_PROVIDER_URL: ${NOTIFICATION_PROVIDER_URL:-http://notification-demo:8082/notify}
+    NOTIFICATION_TIMEOUT_SECONDS: ${NOTIFICATION_TIMEOUT_SECONDS:-2}
+    NOTIFICATION_RETRY_INTERVAL_MS: ${NOTIFICATION_RETRY_INTERVAL_MS:-1000}
+    NOTIFICATION_MAX_ATTEMPTS: ${NOTIFICATION_MAX_ATTEMPTS:-3}
 
 services:
   postgres:
@@ -88,6 +92,26 @@ services:
         limits:
           cpus: '1.0'
           memory: 512M
+
+  notification-demo:
+    build: ./backend
+    command: ["notify-demo"]
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      NOTIFICATION_DEMO_PORT: "8082"
+    ports:
+      - "127.0.0.1:8082:8082"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8082/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
 
   frontend:
     build: ./frontend
