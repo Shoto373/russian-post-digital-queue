@@ -14,7 +14,7 @@ x-backend: &backend
 services:
   postgres:
     image: postgres:17-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
@@ -52,7 +52,7 @@ services:
 
   swagger:
     image: swaggerapi/swagger-ui
-    restart: unless-stopped
+    restart: always
     ports:
       - "8081:8080"
     volumes:
@@ -69,7 +69,7 @@ services:
 
   backend:
     <<: *backend
-    restart: unless-stopped
+    restart: always
     volumes:
       - ./queue_policy.yaml:/app/queue_policy.yaml:ro
     ports:
@@ -91,7 +91,7 @@ services:
 
   frontend:
     build: ./frontend
-    restart: unless-stopped
+    restart: always
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
       PUBLIC_APP_BASE_URL: ${PUBLIC_APP_BASE_URL:-}
@@ -111,7 +111,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.55.0
-    restart: unless-stopped
+    restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
@@ -128,7 +128,7 @@ services:
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0.15.0
-    restart: unless-stopped
+    restart: always
     command:
       - "--no-collector.stat_bgwriter"
     environment:
@@ -144,7 +144,7 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.27.0
-    restart: unless-stopped
+    restart: always
     entrypoint: ["/entrypoint.sh"]
     volumes:
       - ./monitoring/alertmanager/alertmanager.template.yml:/etc/alertmanager/alertmanager.template.yml:ro
@@ -164,7 +164,7 @@ services:
 
   loki:
     image: grafana/loki:3.0.0
-    restart: unless-stopped
+    restart: always
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
@@ -179,7 +179,7 @@ services:
 
   promtail:
     image: grafana/promtail:3.0.0
-    restart: unless-stopped
+    restart: always
     command: -config.file=/etc/promtail/config.yml
     volumes:
       - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
@@ -194,7 +194,7 @@ services:
 
   grafana:
     image: grafana/grafana:11.3.0
-    restart: unless-stopped
+    restart: always
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?Set GRAFANA_PASSWORD in .env}
@@ -218,7 +218,7 @@ services:
 
   postgres-backup:
     image: prodrigestivill/postgres-backup-local:17-alpine
-    restart: unless-stopped
+    restart: always
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
