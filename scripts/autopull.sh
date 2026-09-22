@@ -60,6 +60,18 @@ else
   docker-compose exec -T backend /app/api migrate up || true
 fi
 
+# Healthcheck after deploy — rollback without crashing daemon (safe, additive)
+HEALTH_URL="http://127.0.0.1:${HTTP_PORT:-8080}/health"
+if ! curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; then
+  echo "⚠️ Backend healthcheck failed at $HEALTH_URL, rolling back to $LOCAL_HASH..." >&2
+  git reset --hard "$LOCAL_HASH" || true
+  if docker compose version >/dev/null 2>&1; then
+    docker compose up -d --build || true
+  else
+    docker-compose up -d --build || true
+  fi
+fi
+
 echo "🧹 Удаление устаревших промежуточных docker-образов..."
 docker image prune -f
 
