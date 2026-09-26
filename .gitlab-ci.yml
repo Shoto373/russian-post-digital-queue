@@ -1,0 +1,40 @@
+stages: [test]
+
+frontend:
+  stage: test
+  image: node:22-alpine
+  script:
+    - cd frontend
+    - npm ci
+    - npm test
+    - npm run build
+  artifacts:
+    paths: [frontend/dist/]
+    expire_in: 7 days
+
+frontend-browser:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.55.0-noble
+  script:
+    - cd frontend
+    - npm ci
+    - npm run dev -- --host 127.0.0.1 --port 5181 &
+    - cd ..
+    - npm install --prefix /tmp/queue-browser --no-save playwright@1.55.0
+    - until curl --fail --silent http://127.0.0.1:5181/ >/dev/null; do sleep 1; done
+    - PLAYWRIGHT_MODULE=/tmp/queue-browser/node_modules/playwright/index.mjs UI_BASE_URL=http://127.0.0.1:5181 node qa/sprint4/reliability-browser.mjs
+
+backend:
+  stage: test
+  image: golang:1.25
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: queueqa
+    POSTGRES_PASSWORD: queueqa
+    POSTGRES_DB: queueqa
+    CORE_TEST_DATABASE_URL: postgres://queueqa:queueqa@postgres:5432/queueqa?sslmode=disable
+  script:
+    - cd backend
+    - go test -race -count=1 ./...
