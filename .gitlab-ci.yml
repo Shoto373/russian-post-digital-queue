@@ -1,27 +1,54 @@
-stages: [test]
+stages:
+  - test
 
 frontend:
   stage: test
   image: node:22-alpine
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - .npm/
   script:
     - cd frontend
     - npm ci
     - npm test
     - npm run build
   artifacts:
-    paths: [frontend/dist/]
+    paths:
+      - frontend/dist/
     expire_in: 7 days
 
 frontend-browser:
   stage: test
   image: mcr.microsoft.com/playwright:v1.55.0-noble
+  variables:
+    NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - .npm/
   script:
     - cd frontend
     - npm ci
     - npm run dev -- --host 127.0.0.1 --port 5181 &
     - cd ..
     - npm install --prefix /tmp/queue-browser --no-save playwright@1.55.0
-    - until curl --fail --silent http://127.0.0.1:5181/ >/dev/null; do sleep 1; done
+    - |
+      ready=0
+      for attempt in $(seq 1 60); do
+        if curl --fail --silent http://127.0.0.1:5181/ >/dev/null; then
+          ready=1
+          break
+        fi
+        sleep 1
+      done
+      test "$ready" -eq 1
     - PLAYWRIGHT_MODULE=/tmp/queue-browser/node_modules/playwright/index.mjs UI_BASE_URL=http://127.0.0.1:5181 node qa/sprint4/reliability-browser.mjs
 
 backend:
