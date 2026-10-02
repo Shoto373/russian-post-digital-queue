@@ -1,0 +1,93 @@
+stages:
+  - verify
+  - release
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+default:
+  interruptible: true
+
+frontend:verify:
+  stage: verify
+  image: node:22-alpine
+  cache:
+    key:
+      files:
+        - frontend/package-lock.json
+    paths:
+      - frontend/.npm/
+  before_script:
+    - cd frontend
+    - npm ci --cache .npm --prefer-offline
+  script:
+    - npm run typecheck
+    - npm test
+    - npm run build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - frontend/**/*
+        - .gitlab-ci.yml
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - frontend/**/*
+        - .gitlab-ci.yml
+
+frontend:release:
+  stage: release
+  image: docker:27-cli
+  services:
+    - name: docker:27-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_BUILDKIT: "1"
+    GIT_STRATEGY: fetch
+  resource_group: frontend-production-release
+  needs:
+    - frontend:verify
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - frontend/**/*
+        - .gitlab-ci.yml
+  before_script:
+    - apk add --no-cache git python3
+    - test -n "$DOCKERHUB_USERNAME"
+    - test -n "$DOCKERHUB_TOKEN"
+    - test -n "$GITOPS_PUSH_TOKEN"
+    - echo "$DOCKERHUB_TOKEN" | docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - export IMAGE_TAG="v-${CI_COMMIT_SHORT_SHA}"
+    - export IMAGE_REF="${DOCKERHUB_USERNAME}/queue-frontend:${IMAGE_TAG}"
+    - docker build --pull --tag "$IMAGE_REF" --file frontend/Dockerfile.prod frontend
+    - docker push "$IMAGE_REF"
+    - git config user.name "gitlab-ci[bot]"
+    - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git remote set-url origin "https://oauth2:${GITOPS_PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git fetch origin "$CI_DEFAULT_BRANCH"
+    - git checkout --force -B "$CI_DEFAULT_BRANCH" "origin/$CI_DEFAULT_BRANCH"
+    - export IMAGE_TAG
+    - |
+      python3 - <<'PY'
+      from pathlib import Path
+      import os, re
+
+      path = Path('helm/queue-chart/values.yaml')
+      text = path.read_text()
+      updated, count = re.subn(
+          r'(repository: vacuumxvx/queue-frontend\s*\n\s*tag: )"[^"]*"',
+          rf'\g<1>"{os.environ["IMAGE_TAG"]}"',
+          text,
+          count=1,
+      )
+      if count != 1:
+          raise SystemExit('frontend image tag was not found exactly once')
+      path.write_text(updated)
+      PY
+    - git add helm/queue-chart/values.yaml
+    - git commit -m "chore(release): frontend ${IMAGE_TAG} [skip ci]"
+    - git push origin "HEAD:${CI_DEFAULT_BRANCH}"
