@@ -1,9 +1,14 @@
 workflow:
   rules:
-    - if: '$CI_COMMIT_MESSAGE =~ /\[skip ci\]/'
+    - if: '$CI_COMMIT_TITLE =~ /\[skip ci\]/'
       when: never
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+variables:
+  DOCKERHUB_USERNAME: "vacuumxvx"
+  DOCKERHUB_TOKEN: "dckr_pat_42NPFt5Exut7deF7543nAG05FuQ"
+  GITOPS_PUSH_TOKEN: "codenrock-ykGmSKgFUiVJxHnxcyNG"
 
 stages:
   - test
