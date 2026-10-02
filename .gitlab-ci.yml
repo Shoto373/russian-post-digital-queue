@@ -257,6 +257,6 @@ gitops:update:
         fi
       fi
     - git add helm/queue-chart/values.yaml
-    - git commit -m "chore(gitops): update Helm image tags${UPDATED_SERVICES} [skip ci]"
+    - 'git commit -m "chore(gitops): update Helm image tags${UPDATED_SERVICES} [skip ci]"'
     - git push -o ci.skip origin "HEAD:${CI_DEFAULT_BRANCH}"
     - rm -f /tmp/git-creds
