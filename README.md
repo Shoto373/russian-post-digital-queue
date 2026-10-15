@@ -1,9 +1,10 @@
 <div align="center">
 
-# Цифровая очередь нового поколения
-### Хакатон PostCode Challenge 2026 • Кейс «Электронная очередь для Почты России»
-**Команда «5 указателей»**
+# 📮 Цифровая очередь нового поколения
+### 🥉 3 место (Бронзовый призёр) • Хакатон PostCode Challenge 2026
+**Кейс «Электронная очередь для Почты России» • Команда «5 указателей»**
 
+[![3 место](https://img.shields.io/badge/🥉_3_место-Бронзовый_призёр-CD7F32?style=for-the-badge)](#)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-pointers--team.tech-003B73?style=for-the-badge&logo=nginx&logoColor=white)](https://pointers-team.tech/)
 [![Backup Demo](https://img.shields.io/badge/Backup-post--queue.duckdns.org-054FA6?style=for-the-badge)](https://post-queue.duckdns.org/)
 [![Frontend Tests](https://img.shields.io/badge/Frontend_Tests-node--test-10B981?style=for-the-badge)](#тестирование-и-верификация)
@@ -20,6 +21,10 @@
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-K3s-326CE5?style=flat-square&logo=kubernetes&logoColor=white)
 ![ArgoCD](https://img.shields.io/badge/GitOps-ArgoCD-EF7B4D?style=flat-square&logo=argo&logoColor=white)
 ![TLS 1.3](https://img.shields.io/badge/TLS_1.3-Let's_Encrypt-10B981?style=flat-square&logo=letsencrypt&logoColor=white)
+
+<br/>
+
+> 🥉 **Призёр хакатона**: проект команды «5 указателей» занял **3 призовое (бронзовое) место** на всероссийском хакатоне **PostCode Challenge 2026** от Почтатеха в треке «Электронная очередь для Почты России».
 
 <br/>
 
@@ -603,3 +608,11 @@ Compose-сервис `postgres-backup` сохраняет архивы в `./bac
 | [DESIGN.md](DESIGN.md) | Продуктовая и визуальная концепция |
 
 Перед изменением API обновляйте реализацию и `docs/openapi.yaml` в одном merge request. Перед изменением схемы добавляйте новую пару миграций `*.up.sql` / `*.down.sql`; уже примененные миграции не редактируются задним числом.
+
+---
+
+<div align="center">
+
+**PostCode Challenge 2026 • 🥉 3 место (Бронзовые призёры) • Команда «5 указателей»**
+
+</div>
