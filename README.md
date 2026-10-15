@@ -616,3 +616,5 @@ Compose-сервис `postgres-backup` сохраняет архивы в `./bac
 **PostCode Challenge 2026 • 🥉 3 место (Бронзовые призёры) • Команда «5 указателей»**
 
 </div>
+
+<!-- Russian Post Digital Queue • PostCode Challenge 2026 -->
