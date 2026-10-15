@@ -617,4 +617,4 @@ Compose-сервис `postgres-backup` сохраняет архивы в `./bac
 
 </div>
 
-<!-- Russian Post Digital Queue • PostCode Challenge 2026 -->
+<!-- Russian Post Digital Queue • PostCode Challenge 2026 • Team 5 Pointers -->
